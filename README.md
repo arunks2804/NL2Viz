@@ -34,8 +34,29 @@ python scripts/generate_data.py
 ```bash
 cp .env.example .env
 ```
-Open `.env` and add your `LANGCHAIN_API_KEY` from [smith.langchain.com](https://smith.langchain.com).
-LangSmith is optional — the app works without it, tracing just won't be active.
+
+Open `.env` and fill in the values:
+
+```
+# LangSmith (optional but recommended)
+# Get your key from smith.langchain.com → Settings → API Keys → Create API Key
+LANGCHAIN_API_KEY=your_key_here
+LANGCHAIN_PROJECT=nl2viz        # name of the project in LangSmith
+LANGCHAIN_TRACING_V2=true       # enables tracing — set to false to disable
+
+# LLM provider keys (optional — you can enter these in the UI instead)
+# Only needed if you want server-side fallback defaults
+ANTHROPIC_API_KEY=
+OPENAI_API_KEY=
+GOOGLE_API_KEY=
+GROQ_API_KEY=
+MISTRAL_API_KEY=
+```
+
+> **Note:** Never commit your `.env` file. It is already in `.gitignore`.
+> LLM provider keys are safer entered in the browser UI — they are stored in
+> `localStorage` only and never sent to the server.
+> LangSmith is optional — the app works fully without it, tracing just won't be active.
 
 ### 4. Start the server
 DuckDB loads the Excel files automatically on first startup.
