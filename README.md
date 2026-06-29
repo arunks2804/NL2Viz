@@ -18,30 +18,34 @@ Powered by LangGraph + LangSmith + DuckDB + ECharts.
 
 ## Quick Start
 
-### 1. Generate sample data
-```bash
-python scripts/generate_data.py
-```
-
-### 2. Copy env file
-```bash
-cp .env.example .env
-# Add your LANGCHAIN_API_KEY from smith.langchain.com
-```
-
-### 3. Install dependencies
+### 1. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Start app
+### 2. Generate sample data
+This creates `data/excel/sales.xlsx`, `data/excel/employees.xlsx`, and `data/schema/knowledge_graph.json`.
+The `data/` folder does not exist in the repo — this step creates it.
+```bash
+python scripts/generate_data.py
+```
+
+### 3. Configure environment
+```bash
+cp .env.example .env
+```
+Open `.env` and add your `LANGCHAIN_API_KEY` from [smith.langchain.com](https://smith.langchain.com).
+LangSmith is optional — the app works without it, tracing just won't be active.
+
+### 4. Start the server
+DuckDB loads the Excel files automatically on first startup.
 ```bash
 uvicorn app.main:app --reload --port 8003
 ```
 
-### 5. Open UI
-```bash
-open frontend/index.html
+### 5. Open the app
+```
+http://localhost:8003
 ```
 
 ## Supported LLM Providers
