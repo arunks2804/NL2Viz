@@ -2,6 +2,8 @@
 
 > **One-line pitch:** Ask a question about your data in plain English. Get an interactive chart in seconds — no SQL, no BI tool, no waiting for a data analyst.
 
+> **Status:** This is a working prototype. Data comes from Excel files loaded into DuckDB. Direct connections to Snowflake, Redshift, BigQuery and other warehouses are on the roadmap — the pipeline and the interface are already built for it.
+
 ---
 
 ## The Problem
@@ -78,7 +80,9 @@ The result is a chronic bottleneck between the question and the answer:
 ## The Proposition
 
 ### General
-NL2Viz is the **plain-English interface to your data**. It uses a LangGraph pipeline — understand, query, execute, visualise — to convert a natural language question into an interactive ECharts chart, with every step traced in LangSmith. Upload any Excel file. Ask any question. Get a chart in seconds.
+NL2Viz is the **plain-English interface to your data**. It uses a LangGraph pipeline — understand, query, execute, visualise — to convert a natural language question into an interactive ECharts chart, with every step traced in LangSmith.
+
+In this prototype, data comes from Excel files you upload — loaded instantly into DuckDB and queryable in plain English. The architecture is designed to evolve: the same pipeline will connect directly to Snowflake, Redshift, BigQuery, and Postgres without changing how the user experience works.
 
 No SQL. No BI tool. No data analyst required for every question.
 
@@ -244,7 +248,7 @@ Analysts can verify what ran. Non-technical users can ignore it.
 
 | Feature | Status |
 |---|---|
-| Direct database connections (Snowflake, Redshift, BigQuery) | Roadmap |
+| Direct database connections (Snowflake, Redshift, BigQuery, Postgres) | **Next up** |
 | Dashboard mode — save and arrange multiple charts | Roadmap |
 | Chart export to PNG / PDF | Roadmap |
 | Query history — recall previous questions and results | Roadmap |
