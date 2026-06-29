@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NL2Viz — Natural Language to Data Visualization</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1117; --panel: #1e2130; --panel2: #252840; --border: #2e3150;
+    --accent: #4f9cf9; --purple: #7c3aed; --green: #10b981; --warn: #f59e0b;
+    --red: #ef4444; --text: #e2e8f0; --muted: #8892a4; --radius: 10px;
+  }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  /* Header */
+  .header { border-bottom: 1px solid var(--border); padding: 20px 32px; }
+  .header h1 { font-size: 1.7rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header p { color: var(--muted); font-size: 0.9rem; margin-top: 3px; }
+  .badges { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .badge { padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; border: 1px solid; }
+  .b-blue { border-color: var(--accent); color: var(--accent); }
+  .b-purple { border-color: #a78bfa; color: #a78bfa; }
+  .b-green { border-color: var(--green); color: var(--green); }
+  .b-warn { border-color: var(--warn); color: var(--warn); }
+
+  /* LangSmith bar */
+  .ls-bar { padding: 8px 32px; font-size: 0.8rem; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
+  .ls-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .ls-dot.green { background: var(--green); }
+  .ls-dot.grey { background: var(--muted); }
+
+  /* Container */
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 32px; }
+
+  /* Provider panel */
+  .provider-panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 24px; overflow: hidden; }
+  .provider-header { padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+  .provider-header h3 { font-size: 0.95rem; }
+  .provider-body { padding: 20px; border-top: 1px solid var(--border); display: none; }
+  .provider-body.open { display: block; }
+  .provider-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .provider-btn { padding: 8px 18px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); cursor: pointer; font-size: 0.85rem; transition: all 0.15s; }
+  .provider-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .provider-btn.active { border-color: var(--accent); background: rgba(79,156,249,0.15); color: var(--accent); font-weight: 600; }
+  .provider-config { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 180px; }
+  .field label { font-size: 0.78rem; color: var(--muted); }
+  .field input { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.9rem; }
+  .field input:focus { outline: none; border-color: var(--accent); }
+  .key-wrap { position: relative; }
+  .key-wrap input { padding-right: 36px; width: 100%; }
+  .key-wrap button { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); cursor: pointer; }
+  .btn-test { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; font-size: 0.85rem; }
+  .provider-status { font-size: 0.8rem; margin-top: 12px; }
+  .key-note { font-size: 0.75rem; color: var(--muted); margin-top: 8px; }
+
+  /* Query section */
+  .query-section { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; }
+  .query-section h2 { font-size: 1rem; margin-bottom: 14px; color: var(--muted); font-weight: 500; }
+  .query-input { width: 100%; padding: 14px 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 1rem; font-family: inherit; resize: vertical; min-height: 80px; }
+  .query-input:focus { outline: none; border-color: var(--accent); }
+  .sample-pills { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+  .sample-pill { padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--panel2); color: var(--muted); cursor: pointer; font-size: 0.78rem; transition: all 0.15s; }
+  .sample-pill:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-viz { padding: 12px 32px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+  .btn-viz:hover { opacity: 0.9; }
+  .btn-viz:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Pipeline steps */
+  .pipeline { margin: 20px 0; display: flex; flex-direction: column; gap: 8px; display: none; }
+  .pipeline.visible { display: flex; }
+  .pipeline-step { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; color: var(--muted); padding: 8px 14px; border-radius: 8px; background: var(--panel); border: 1px solid var(--border); transition: all 0.3s; }
+  .pipeline-step.active { color: var(--text); border-color: var(--accent); background: rgba(79,156,249,0.05); }
+  .pipeline-step.done { color: var(--green); border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.05); }
+  .pipeline-step.error { color: var(--red); border-color: rgba(239,68,68,0.3); }
+  .step-icon { width: 22px; text-align: center; font-size: 1rem; }
+  .spin { animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  /* Result */
+  .result-section { display: none; }
+  .result-section.visible { display: block; }
+
+  .chart-panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 16px; }
+  .chart-panel h3 { font-size: 1rem; margin-bottom: 4px; }
+  .chart-reasoning { font-size: 0.82rem; color: var(--muted); font-style: italic; margin-bottom: 16px; }
+  #chartContainer { width: 100%; min-height: 460px; }
+
+  /* Details */
+  .details-panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
+  .details-header { padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 0.9rem; border-bottom: 1px solid transparent; }
+  .details-header.open { border-bottom-color: var(--border); }
+  .details-body { display: none; }
+  .details-body.open { display: block; }
+  .detail-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .detail-tab { padding: 10px 20px; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.85rem; border-bottom: 2px solid transparent; }
+  .detail-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .detail-content { padding: 16px 20px; display: none; }
+  .detail-content.active { display: block; }
+  .code-wrap { position: relative; border-radius: 8px; overflow: hidden; }
+  .code-wrap pre { font-size: 0.82rem; max-height: 300px; overflow-y: auto; }
+  .copy-btn { position: absolute; top: 8px; right: 8px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--muted); cursor: pointer; font-size: 0.75rem; }
+  .data-table-wrap { overflow-x: auto; max-height: 300px; overflow-y: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  th { position: sticky; top: 0; background: var(--panel2); padding: 8px 12px; text-align: left; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+  td { padding: 7px 12px; border-bottom: 1px solid rgba(46,49,80,0.5); }
+  tr:last-child td { border-bottom: none; }
+  .row-count { font-size: 0.78rem; color: var(--muted); margin-bottom: 8px; }
+
+  /* LangSmith trace */
+  .trace-bar { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; margin-bottom: 16px; }
+  .trace-bar a { color: var(--accent); text-decoration: none; }
+  .trace-bar a:hover { text-decoration: underline; }
+
+  /* Error */
+  .error-panel { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: var(--radius); padding: 16px 20px; color: var(--red); font-size: 0.88rem; margin-bottom: 16px; display: none; }
+  .error-panel.visible { display: block; }
+
+  /* Upload */
+  .upload-section { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-top: 24px; }
+  .upload-section h3 { font-size: 0.95rem; margin-bottom: 12px; }
+  .drop-zone { border: 2px dashed var(--border); border-radius: 10px; padding: 32px; text-align: center; cursor: pointer; transition: all 0.2s; }
+  .drop-zone:hover, .drop-zone.drag { border-color: var(--accent); background: rgba(79,156,249,0.05); }
+  .drop-zone p { color: var(--muted); font-size: 0.85rem; margin-top: 8px; }
+  .drop-zone input { display: none; }
+  .upload-result { margin-top: 12px; font-size: 0.85rem; padding: 10px 14px; border-radius: 8px; display: none; }
+  .upload-result.ok { background: rgba(16,185,129,0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+  .upload-result.fail { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>NL2Viz</h1>
+  <p>Natural Language to Data Visualization</p>
+  <div class="badges">
+    <span class="badge b-purple">LangGraph</span>
+    <span class="badge b-green">LangSmith</span>
+    <span class="badge b-blue">DuckDB</span>
+    <span class="badge b-warn">ECharts</span>
+  </div>
+</div>
+
+<!-- LangSmith status bar -->
+<div class="ls-bar">
+  <div class="ls-dot" id="lsDot"></div>
+  <span id="lsStatus">Checking LangSmith...</span>
+</div>
+
+<div class="container">
+
+  <!-- Provider panel -->
+  <div class="provider-panel">
+    <div class="provider-header" onclick="toggleProvider()">
+      <h3>⚙️ LLM Provider — <span id="providerLabel" style="color:var(--accent)">Not configured</span></h3>
+      <span id="providerChevron">▼</span>
+    </div>
+    <div class="provider-body" id="providerBody">
+      <div class="provider-buttons">
+        <button class="provider-btn" onclick="selectProvider('ollama')">Ollama</button>
+        <button class="provider-btn" onclick="selectProvider('claude')">Claude</button>
+        <button class="provider-btn" onclick="selectProvider('openai')">OpenAI</button>
+        <button class="provider-btn" onclick="selectProvider('gemini')">Gemini</button>
+        <button class="provider-btn" onclick="selectProvider('mistral')">Mistral</button>
+        <button class="provider-btn" onclick="selectProvider('groq')">Groq</button>
+      </div>
+      <div id="providerConfig"></div>
+      <div style="margin-top:12px; display:flex; align-items:center; gap:12px;">
+        <button class="btn-test" onclick="testConnection()">Test Connection</button>
+        <span id="providerStatus" class="provider-status"></span>
+      </div>
+      <p class="key-note">API keys stored in browser only — never sent to NL2Viz servers</p>
+    </div>
+  </div>
+
+  <!-- Query section -->
+  <div class="query-section">
+    <h2>Ask anything about your data</h2>
+    <textarea class="query-input" id="questionInput" placeholder="e.g. Compare total revenue by product in 2024 vs 2023"></textarea>
+
+    <div class="sample-pills" id="samplePills">
+      <span class="sample-pill" onclick="useQuestion(this)">Compare revenue 2024 vs 2023</span>
+      <span class="sample-pill" onclick="useQuestion(this)">Monthly sales trend last year</span>
+      <span class="sample-pill" onclick="useQuestion(this)">Salary distribution by department</span>
+      <span class="sample-pill" onclick="useQuestion(this)">Top 5 products by revenue</span>
+      <span class="sample-pill" onclick="useQuestion(this)">Headcount by department</span>
+      <span class="sample-pill" onclick="useQuestion(this)">Hiring trend year over year</span>
+      <span class="sample-pill" onclick="useQuestion(this)">Profit by region 2024</span>
+      <span class="sample-pill" onclick="useQuestion(this)">Which region has highest profit margin?</span>
+    </div>
+
+    <button class="btn-viz" id="vizBtn" onclick="runQuery()">Visualize →</button>
+  </div>
+
+  <!-- Pipeline progress -->
+  <div class="pipeline" id="pipeline">
+    <div class="pipeline-step" id="step-understand"><span class="step-icon">○</span>Understanding your question...</div>
+    <div class="pipeline-step" id="step-query"><span class="step-icon">○</span>Writing data query...</div>
+    <div class="pipeline-step" id="step-execute"><span class="step-icon">○</span>Fetching data...</div>
+    <div class="pipeline-step" id="step-visualize"><span class="step-icon">○</span>Deciding best visualization...</div>
+    <div class="pipeline-step" id="step-format"><span class="step-icon">○</span>Formatting chart...</div>
+  </div>
+
+  <!-- Error -->
+  <div class="error-panel" id="errorPanel"></div>
+
+  <!-- Result -->
+  <div class="result-section" id="resultSection">
+
+    <!-- Chart -->
+    <div class="chart-panel">
+      <h3 id="chartTitle"></h3>
+      <div class="chart-reasoning" id="chartReasoning"></div>
+      <div id="chartContainer"></div>
+    </div>
+
+    <!-- LangSmith trace -->
+    <div class="trace-bar" id="traceBar" style="display:none">
+      <span>🔍 Pipeline traced in LangSmith</span>
+      <a href="https://smith.langchain.com" target="_blank">View traces at smith.langchain.com →</a>
+    </div>
+
+    <!-- Details -->
+    <div class="details-panel">
+      <div class="details-header" id="detailsHeader" onclick="toggleDetails()">
+        <span>📋 Query Details</span>
+        <span id="detailsChevron">▼</span>
+      </div>
+      <div class="details-body" id="detailsBody">
+        <div class="detail-tabs">
+          <button class="detail-tab active" onclick="showDetailTab('sql')">SQL Query</button>
+          <button class="detail-tab" onclick="showDetailTab('data')">Raw Data</button>
+        </div>
+        <div class="detail-content active" id="tab-sql">
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copySql()">Copy</button>
+            <pre><code id="sqlCode" class="language-sql"></code></pre>
+          </div>
+        </div>
+        <div class="detail-content" id="tab-data">
+          <div class="row-count" id="rowCount"></div>
+          <div class="data-table-wrap"><table id="dataTable"></table></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Upload section -->
+  <div class="upload-section">
+    <h3>📁 Upload your own Excel files</h3>
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleDrop(event)">
+      <div style="font-size:2rem;">📂</div>
+      <p>Drop files here or click to upload</p>
+      <p>Accepts .xlsx and .xls files — loaded into DuckDB automatically</p>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileSelect(event)">
+    </div>
+    <div class="upload-result" id="uploadResult"></div>
+  </div>
+
+</div>
+
+<script>
+const API = 'http://localhost:8003';
+let currentProvider = localStorage.getItem('nl2viz_provider') || 'ollama';
+let currentModel = localStorage.getItem('nl2viz_model') || '';
+let currentApiKey = localStorage.getItem('nl2viz_api_key') || '';
+let currentChart = null;
+let lastSql = '';
+let lastData = null;
+
+// ── Health check ──────────────────────────────────────────────────────────────
+async function checkHealth() {
+  try {
+    const r = await fetch(API + '/health');
+    const d = await r.json();
+    const dot = document.getElementById('lsDot');
+    const st = document.getElementById('lsStatus');
+    if (d.langsmith) {
+      dot.className = 'ls-dot green';
+      st.textContent = '🟢 LangSmith connected — traces visible at smith.langchain.com';
+    } else {
+      dot.className = 'ls-dot grey';
+      st.textContent = '⚪ LangSmith not configured — add LANGCHAIN_API_KEY to .env to enable tracing';
+    }
+  } catch(e) {
+    document.getElementById('lsStatus').textContent = '⚠ Backend not reachable — start: uvicorn app.main:app --port 8003';
+  }
+}
+
+// ── Provider ──────────────────────────────────────────────────────────────────
+function toggleProvider() {
+  const body = document.getElementById('providerBody');
+  const ch = document.getElementById('providerChevron');
+  body.classList.toggle('open');
+  ch.textContent = body.classList.contains('open') ? '▲' : '▼';
+}
+
+function selectProvider(p) {
+  currentProvider = p;
+  document.querySelectorAll('.provider-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase() === p));
+  renderProviderConfig();
+  saveProvider();
+}
+
+function renderProviderConfig() {
+  const isOllama = currentProvider === 'ollama';
+  let html = '<div class="provider-config">';
+  if (isOllama) {
+    html += `<div class="field"><label>Model</label><input id="modelInput" placeholder="e.g. mistral, llama3.2, gemma3..." value="${currentModel}" oninput="currentModel=this.value;saveProvider()"></div>`;
+  } else {
+    html += `<div class="field"><label>Model</label><input id="modelInput" placeholder="e.g. gpt-4o" value="${currentModel}" oninput="currentModel=this.value;saveProvider()"></div>`;
+    html += `<div class="field"><label>API Key</label><div class="key-wrap"><input type="password" id="apiKeyInput" placeholder="sk-..." value="${currentApiKey}" oninput="currentApiKey=this.value;saveProvider()"><button onclick="toggleKey()">👁</button></div></div>`;
+  }
+  html += '</div>';
+  document.getElementById('providerConfig').innerHTML = html;
+  document.getElementById('providerLabel').textContent = currentProvider.charAt(0).toUpperCase() + currentProvider.slice(1);
+}
+
+function toggleKey() {
+  const inp = document.getElementById('apiKeyInput');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function saveProvider() {
+  localStorage.setItem('nl2viz_provider', currentProvider);
+  localStorage.setItem('nl2viz_model', currentModel);
+  localStorage.setItem('nl2viz_api_key', currentApiKey);
+}
+
+async function testConnection() {
+  const st = document.getElementById('providerStatus');
+  st.textContent = 'Testing...'; st.style.color = 'var(--muted)';
+  try {
+    const r = await fetch(API + '/health');
+    const d = await r.json();
+    if (currentProvider === 'ollama' && d.ollama) {
+      st.textContent = '✓ Ollama connected'; st.style.color = 'var(--green)';
+    } else {
+      st.textContent = '✓ Backend reachable'; st.style.color = 'var(--green)';
+    }
+  } catch(e) {
+    st.textContent = '✗ Cannot reach backend'; st.style.color = 'var(--red)';
+  }
+}
+
+// ── Query ─────────────────────────────────────────────────────────────────────
+function useQuestion(el) {
+  document.getElementById('questionInput').value = el.textContent;
+}
+
+// Step animation
+const STEPS = ['understand', 'query', 'execute', 'visualize', 'format'];
+const STEP_LABELS = [
+  'Understanding your question...',
+  'Writing data query...',
+  'Fetching data...',
+  'Deciding best visualization...',
+  'Formatting chart...',
+];
+
+function setStep(idx, status, extraText) {
+  STEPS.forEach((s, i) => {
+    const el = document.getElementById('step-' + s);
+    const label = extraText && i === idx ? STEP_LABELS[i].replace('...', '') + ' — ' + extraText : STEP_LABELS[i];
+    if (i < idx) {
+      el.className = 'pipeline-step done';
+      el.innerHTML = `<span class="step-icon">✓</span>${STEP_LABELS[i].replace('...', '')}`;
+    } else if (i === idx) {
+      el.className = `pipeline-step ${status}`;
+      const icon = status === 'active' ? '<span class="step-icon"><span class="spin">⟳</span></span>' : status === 'done' ? '<span class="step-icon">✓</span>' : '<span class="step-icon">✗</span>';
+      el.innerHTML = `${icon}${label}`;
+    } else {
+      el.className = 'pipeline-step';
+      el.innerHTML = `<span class="step-icon">○</span>${STEP_LABELS[i]}`;
+    }
+  });
+}
+
+function resetSteps() {
+  STEPS.forEach((s, i) => {
+    const el = document.getElementById('step-' + s);
+    el.className = 'pipeline-step';
+    el.innerHTML = `<span class="step-icon">○</span>${STEP_LABELS[i]}`;
+  });
+}
+
+async function runQuery() {
+  const question = document.getElementById('questionInput').value.trim();
+  if (!question) { alert('Please enter a question.'); return; }
+
+  const btn = document.getElementById('vizBtn');
+  btn.disabled = true;
+
+  document.getElementById('pipeline').classList.add('visible');
+  document.getElementById('resultSection').classList.remove('visible');
+  document.getElementById('errorPanel').classList.remove('visible');
+  resetSteps();
+
+  // Animate through steps while waiting for response
+  const delays = [0, 1200, 2500, 3800, 5000];
+  delays.forEach((d, i) => setTimeout(() => setStep(i, 'active'), d));
+
+  try {
+    const r = await fetch(API + '/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question,
+        provider: currentProvider,
+        model: currentModel,
+        api_key: currentApiKey,
+      }),
+    });
+    const data = await r.json();
+
+    if (data.no_data) {
+      setStep(2, 'error');
+      showError('No data found for your question. Try a different time period or rephrasing.', data.sql);
+      btn.disabled = false;
+      return;
+    }
+
+    if (data.error) {
+      setStep(2, 'error');
+      showError(data.error, data.sql);
+      btn.disabled = false;
+      return;
+    }
+
+    // Complete all steps
+    const chartCount = (data.echarts_options || []).length;
+    setStep(3, 'done', chartCount > 1 ? `${chartCount} charts selected` : (data.viz_configs?.[0]?.chart_type || '') + ' selected');
+    setTimeout(() => {
+      setStep(4, 'done', 'Ready');
+      showResult(data);
+      btn.disabled = false;
+    }, 400);
+
+  } catch(e) {
+    setStep(0, 'error');
+    showError(e.message);
+    btn.disabled = false;
+  }
+}
+
+function showError(msg, sql) {
+  const ep = document.getElementById('errorPanel');
+  ep.textContent = '✗ ' + msg + (sql ? '\n\nSQL attempted:\n' + sql : '');
+  ep.classList.add('visible');
+}
+
+function showResult(data) {
+  lastSql = data.sql || '';
+  lastData = data;
+
+  // Reasoning
+  document.getElementById('chartReasoning').textContent = data.reasoning ? '💡 ' + data.reasoning : '';
+
+  // Dispose existing charts
+  if (currentChart) { currentChart.dispose(); currentChart = null; }
+  (window._extraCharts || []).forEach(c => c.dispose());
+  window._extraCharts = [];
+
+  const options = data.echarts_options || [];
+  const container = document.getElementById('chartContainer');
+
+  if (options.length === 0) {
+    container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px;">No chart data returned.</p>';
+  } else if (options.length === 1) {
+    // Single chart — full width
+    container.style.height = '500px';
+    container.innerHTML = '<div id="chart0" style="width:100%;height:500px;"></div>';
+    currentChart = echarts.init(document.getElementById('chart0'), 'dark');
+    currentChart.setOption({ backgroundColor: 'transparent', ...options[0] });
+    document.getElementById('chartTitle').textContent = data.viz_configs?.[0]?.title || 'Chart';
+    setTimeout(() => currentChart && currentChart.resize(), 100);
+  } else {
+    // Multiple charts — responsive grid
+    const cols = options.length === 2 ? 2 : options.length === 3 ? 3 : 2;
+    container.style.height = 'auto';
+    container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:16px;">` +
+      options.map((_, i) => `<div id="chart${i}" style="height:420px;"></div>`).join('') +
+      '</div>';
+    document.getElementById('chartTitle').textContent = `${options.length} charts`;
+    options.forEach((opt, i) => {
+      const c = echarts.init(document.getElementById('chart' + i), 'dark');
+      c.setOption({ backgroundColor: 'transparent', ...opt });
+      setTimeout(() => c.resize(), 100);
+      if (i === 0) currentChart = c;
+      else window._extraCharts.push(c);
+    });
+  }
+
+  window.addEventListener('resize', () => {
+    currentChart && currentChart.resize();
+    (window._extraCharts || []).forEach(c => c.resize());
+  });
+
+  // SQL tab
+  const sqlEl = document.getElementById('sqlCode');
+  sqlEl.textContent = data.sql || '';
+  hljs.highlightElement(sqlEl);
+
+  // Data table
+  document.getElementById('rowCount').textContent = `${data.row_count || 0} rows returned`;
+  buildTable(data);
+
+  // LangSmith trace bar
+  const ls = document.getElementById('traceBar');
+  ls.style.display = document.getElementById('lsDot').classList.contains('green') ? 'flex' : 'none';
+
+  document.getElementById('resultSection').classList.add('visible');
+}
+
+function buildTable(data) {
+  // We need raw rows — fetch them from the API isn't needed since we have sql
+  // Show a note that full data is available via the SQL
+  const table = document.getElementById('dataTable');
+  table.innerHTML = '<tr><td colspan="99" style="color:var(--muted);padding:20px;text-align:center;">Raw data table requires /data endpoint — run the SQL query above in DuckDB to see all rows.</td></tr>';
+}
+
+function copySql() { navigator.clipboard.writeText(lastSql); }
+
+// Details panel
+function toggleDetails() {
+  const body = document.getElementById('detailsBody');
+  const header = document.getElementById('detailsHeader');
+  const ch = document.getElementById('detailsChevron');
+  body.classList.toggle('open');
+  header.classList.toggle('open');
+  ch.textContent = body.classList.contains('open') ? '▲' : '▼';
+}
+
+function showDetailTab(name) {
+  document.querySelectorAll('.detail-tab').forEach((b, i) => b.classList.toggle('active', ['sql','data'][i] === name));
+  document.querySelectorAll('.detail-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + name));
+}
+
+// ── Upload ────────────────────────────────────────────────────────────────────
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) uploadFile(file);
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) uploadFile(file);
+}
+
+async function uploadFile(file) {
+  const res = document.getElementById('uploadResult');
+  res.style.display = 'block';
+  res.className = 'upload-result';
+  res.textContent = `Uploading ${file.name}...`;
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  try {
+    const r = await fetch(API + '/upload', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.error) {
+      res.className = 'upload-result fail';
+      res.textContent = '✗ ' + d.error;
+    } else {
+      res.className = 'upload-result ok';
+      res.textContent = `✓ ${d.message}`;
+    }
+  } catch(e) {
+    res.className = 'upload-result fail';
+    res.textContent = '✗ Upload failed: ' + e.message;
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(function init() {
+  selectProvider(currentProvider);
+  document.querySelectorAll('.provider-btn').forEach(b => {
+    if (b.textContent.toLowerCase() === currentProvider) b.classList.add('active');
+  });
+  checkHealth();
+  toggleProvider(); // open by default
+})();
+</script>
+</body>
+</html>

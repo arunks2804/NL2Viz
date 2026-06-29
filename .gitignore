@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Environment
+.env
+
+# Data — generated at runtime
+data/nl2viz.duckdb
+data/excel/
+data/schema/knowledge_graph.json
+
+# IDE
+.DS_Store
+.vscode/
+.idea/
